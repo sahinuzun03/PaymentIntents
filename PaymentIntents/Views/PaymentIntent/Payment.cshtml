@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = "Ödeme";
+}
+
+<h1>Ödeme</h1>
+
+<form id="paymentForm">
+    <div>
+        <label for="fullName">Ad Soyad</label>
+        <input type="text" id="fullName" required>
+    </div>
+    <div>
+        <label for="cardNumber">Kart Numarası</label>
+        <div id="cardNumber" class="StripeElement"></div>
+    </div>
+    <div>
+        <label for="cardExpiry">Son Kullanma Tarihi</label>
+        <div id="cardExpiry" class="StripeElement"></div>
+    </div>
+    <div>
+        <label for="cardCvc">CVV</label>
+        <div id="cardCvc" class="StripeElement"></div>
+    </div>
+    <button type="submit">Ödeme Yap</button>
+</form>
+
+@section Scripts {
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        var stripe = Stripe('pk_test_51NQ4WWI9WZPjpc2vbiY2hUEg5LDyZoRNlIIDhdpfySSv6ZlbYWJUQr2vEFI4uLN7bL5AkD39ccevVHoHhHsLFbps004delApGd');
+        var elements = stripe.elements();
+
+        var cardNumberElement = elements.create('cardNumber');
+        cardNumberElement.mount('#cardNumber');
+
+        var cardExpiryElement = elements.create('cardExpiry');
+        cardExpiryElement.mount('#cardExpiry');
+
+        var cardCvcElement = elements.create('cardCvc');
+        cardCvcElement.mount('#cardCvc');
+
+        document.getElementById('paymentForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var fullName = document.getElementById('fullName').value;
+
+            stripe.createPaymentMethod({
+                type: 'card',
+                card: cardNumberElement,
+                billing_details: {
+                    name: fullName
+                }
+            }).then(function (result) {
+                if (result.error) {
+                    console.error(result.error);
+                } else {
+                    var paymentData = {
+                        fullName: fullName,
+                        paymentMethod: result.paymentMethod.id
+                    };
+
+                    fetch('/PaymentIntent/Payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(paymentData)
+                    }).then(function (response) {
+                        return response.json();
+                    }).then(function (data) {
+                        // Ödeme işlemini onaylama
+                        stripe.confirmCardPayment(data.clientSecret, {
+                            payment_method: result.paymentMethod.id
+                        }).then(function (result) {
+                            if (result.error) {
+                                console.error(result.error);
+                            } else {
+                                console.log(result.paymentIntent);
+                                // Ödeme işlemi tamamlandı, isteğe bağlı olarak yönlendirme yapabilir veya başka bir işlem gerçekleştirebilirsiniz
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    </script>
+}
