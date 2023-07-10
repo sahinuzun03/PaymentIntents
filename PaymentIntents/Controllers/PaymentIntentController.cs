@@ -19,7 +19,7 @@ namespace PaymentIntents.Controllers
         }
 
         [HttpPost]
-        public IActionResult Payment([FromBody]PaymentData paymentData)
+        public async Task<IActionResult> Payment([FromBody]PaymentData paymentData)
         {
             StripeConfiguration.ApiKey = _config["Stripe:SecretKey"];
 
@@ -41,7 +41,7 @@ namespace PaymentIntents.Controllers
 
 
             var service = new PaymentIntentService();
-            var paymentIntent = service.Create(options);
+            var paymentIntent = await service.CreateAsync(options);
 
             return Json(new { clientSecret = paymentIntent.ClientSecret });
         }
